@@ -281,19 +281,21 @@ func main() {
 			"Argument 1: Known letter locations, use _ in the place of any unknown characters before the search term\n"+
 			"Argument 2: Characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in\n"+
 			"Argument 3: Characters you know aren't in the word\n"+
-			"Sending a number as an argument sets the size of the word\n", 
+			"Sending a number as an argument sets the size of the word, otherwise it will default to 5\n", 
 		)
 	}
 
 	if len(os.Args) > 1 {
-		var i int
+		var wordSize, i int
+		outer:
 		for _, a := range os.Args {
-			wordSize, err := strconv.Atoi(a)
+			size, err := strconv.Atoi(a)
 			switch {
 			case a == "-h" || a == "--help":
 				help()
 				return
 			case err == nil:
+				wordSize = size
 				if len(search) != wordSize {
 					createDict(wordSize)
 					createSearch(wordSize)
@@ -304,15 +306,21 @@ func main() {
 			switch i-1 {
 			case 1:
 				posIs = strings.TrimSpace(a)
+				posIs = strings.ToLower(posIs)
 			case 2:
 				isIn = strings.TrimSpace(a)
+				isIn = strings.ToLower(isIn)
 			case 3:
 				notIn = strings.TrimSpace(a)
+				notIn = strings.ToLower(notIn)
 			case 4:
-				runSearch(true)
 				fmt.Println("Too many args, attempted to use the first 3")
-				return
+				break outer
 			}
+		}
+		if len(search) != 5 && wordSize == 0 {
+			createDict(5)
+			createSearch(5)
 		}
 		runSearch(true)
 		return
