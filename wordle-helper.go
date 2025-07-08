@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 )
 
 type word struct{
-	W 		[5]byte
+	W 		string
 	Rank 	uint16
 }
 
@@ -25,7 +26,7 @@ var (
 	screen 				tcell.Screen
 	defaultStyle 		= tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorWhite)
 	posIs, isIn, notIn 	string
-	search 				[5][26]map[uint16]uint8
+	search 				[][26]map[uint16]uint8
 	dict 				[]word
 	mainTextBuf 		[][]rune
 )
@@ -40,9 +41,6 @@ func input() {
 			time.Sleep(time.Millisecond*500)
 			screen.Fini()
 			os.Exit(0)
-		case tcell.KeyUp:
-			// goUpInLog()
-			drawText("Up arrow pressed!\n")
 		case tcell.KeyBackspace:
 			drawText(string(rune(0x08)))
 			input()
@@ -89,16 +87,9 @@ func drawText(text string) {
 	screen.Show()
 }
 
-func goUpInLog() {
-	posIs = "test"
-	isIn = "test"
-	notIn = "test"
-	drawText(fmt.Sprintln(posIs, isIn, notIn))
-}
-
-func containsAny(s, targetBytes []byte) bool {
+func containsAny(s, targetBytes string) bool {
 	if len(targetBytes) == 0 {return false}
-	byteSet := make(map[byte]bool)
+	byteSet := make(map[rune]bool)
 	for _, r := range targetBytes {
 		if int(r) <= 123 && int(r) >= 97 {
 			byteSet[r] = true
@@ -110,14 +101,14 @@ func containsAny(s, targetBytes []byte) bool {
 	return false
 }
 
-func containsAll(s, requiredBytes []byte) bool {
+func containsAll(s, requiredBytes string) bool {
 	if len(requiredBytes) == 0 {return true}
 	for i, r := range requiredBytes {
 		if int(r) <= 123 && int(r) >= 97 {
-			if s[i] == r {return false}
+			if s[i] == byte(r) {return false}
 		}
 	}
-	foundBytes := make(map[byte]bool)
+	foundBytes := make(map[rune]bool)
 	for _, r := range requiredBytes {
 		if int(r) <= 123 && int(r) >= 97 {
 			foundBytes[r] = false
@@ -138,13 +129,14 @@ func containsAll(s, requiredBytes []byte) bool {
 
 func runSearch(notInRaw ...bool) {
 		if len(posIs) <= 0 {posIs+="_"}
-		if len(posIs) > len(search) {posIs = posIs[:len(search)]}
-		size := len(posIs)
-		list := make([]map[uint16]uint8, size)
+		size := len(search)
+		if len(posIs) > size {posIs = posIs[:size]}
+		if len(isIn) > size {isIn = isIn[:size]}
+		list := make([]map[uint16]uint8, len(posIs))
 		add2List := func(i int, j uint16) {
 			ok := true
 			if i > 0 {_, ok = list[i-1][j]}
-			if ok && containsAll(dict[int(j)].W[:5], []byte(isIn)) && !containsAny(dict[int(j)].W[:5], []byte(notIn)) {
+			if ok && containsAll(dict[int(j)].W[:size], isIn) && !containsAny(dict[int(j)].W[:size], notIn) {
 				list[i][j]++
 			}
 		}
@@ -156,7 +148,7 @@ func runSearch(notInRaw ...bool) {
 				}
 			} else {
 				for k := range 26 {
-					if !containsAny([]byte{byte(k+97)}, []byte(notIn)) {
+					if !containsAny(string(rune(k+97)), notIn) {
 						for j := range search[i][k] {
 							add2List(i, j)
 						}
@@ -175,7 +167,9 @@ func runSearch(notInRaw ...bool) {
 		})
 		var textBuf string
 		for _, r := range output {
-			textBuf += string(r.W[:5])+"\n"
+			textBuf += string(r.W[:size])+"\n"
+			// textBuf += string(r.W[:size])+" "
+			// textBuf += fmt.Sprintln(r.Rank)
 		}
 		if len(notInRaw) > 0 && notInRaw[0] {
 			fmt.Print(textBuf)
@@ -190,10 +184,8 @@ func isError(err error) {
 	}
 }
 
-func main() {
-	file, err := os.Open("dict.gob")
-	defer file.Close()
-	if errors.Is(err,  os.ErrNotExist) {
+func createDict(wordSize int) {
+		dict = make([]word, 0)
 		resp, err := http.Get("https://raw.githubusercontent.com/dwyl/english-words/refs/heads/master/words_alpha.txt")
 		isError(err)
 		defer resp.Body.Close()
@@ -207,20 +199,17 @@ func main() {
 		isError(err)
 		rankBuf := bytes.NewReader(rankTempBuf)
 		rankReader := bufio.NewReader(rankBuf)
-		wordRank := make(map[[5]byte]uint16)
+		wordRank := make(map[string]uint16)
 		var i uint16
 		for {
 			s, err := rankReader.ReadString('\n')
 			if err != nil {
 				break
 			}
-			if len([]rune(strings.TrimSpace(s))) == 5 {
+			s = strings.TrimSpace(s)
+			if len(s) == wordSize {
 				i++
-				var word [5]byte
-				for i := range word {
-					word[i] = s[i]
-				}
-				wordRank[word] = i
+				wordRank[s] = i
 			}
 		}
 		for {
@@ -228,11 +217,10 @@ func main() {
 			if err != nil {
 				break
 			}
-			if len([]rune(strings.TrimSpace(b))) == 5 {
+			b = strings.TrimSpace(b)
+			if len(b) == wordSize {
 				var word word
-				for i := range word.W {
-					word.W[i] = byte(b[i])
-				}
+				word.W = b
 				_, ok := wordRank[word.W]
 				if !ok {
 					word.Rank = 65535
@@ -242,19 +230,16 @@ func main() {
 				dict = append(dict, word)
 			}
 		}
-		file, err = os.Create("dict.gob")
+		file, err := os.Create("dict.gob")
+		defer file.Close()
 		isError(err)
 		encoder := gob.NewEncoder(file)
 		encoder.Encode(dict)
-	} else {
-		decode := gob.NewDecoder(file)
-		err := decode.Decode(&dict)
-		isError(err)
-	}
+}
 
-	file, err = os.Open("search.gob")
-	if errors.Is(err, os.ErrNotExist) {
-		for i := range 5 {
+func createSearch(wordSize int) {
+		search = make([][26]map[uint16]uint8, wordSize)
+		for i := range wordSize {
 			for charNum := range 26 {
 				search[i][charNum] = make(map[uint16]uint8)
 				for j, r := range dict {
@@ -264,10 +249,27 @@ func main() {
 				}
 			}
 		}
-		file, err = os.Create("search.gob")
+		file, err := os.Create("search.gob")
+		defer file.Close()
 		isError(err)
 		encoder := gob.NewEncoder(file)
 		encoder.Encode(search)
+}
+
+func main() {
+	file, err := os.Open("dict.gob")
+	defer file.Close()
+	if errors.Is(err, os.ErrNotExist) {
+		createDict(5)
+	} else {
+		decode := gob.NewDecoder(file)
+		err := decode.Decode(&dict)
+		isError(err)
+	}
+
+	file, err = os.Open("search.gob")
+	if errors.Is(err, os.ErrNotExist) {
+		createSearch(5)
 	} else {
 		decode := gob.NewDecoder(file)
 		err := decode.Decode(&search)
@@ -276,22 +278,30 @@ func main() {
 
 	help := func() {
 		fmt.Print(
-			"Argument 1: Type phrase, use _ in the place of any unknown characters before the search term\n"+
-			"Argument 2: In the second argument type any characters you know are in the word, but not the position\n"+
-			"            Use _ to put the characters in the place you know they are not in\n"+
-			"Argument 3: Type in any characters you know aren't in the word\n"+
-			"Make sure the characters are all lowercase\n", 
+			"Argument 1: Known letter locations, use _ in the place of any unknown characters before the search term\n"+
+			"Argument 2: Characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in\n"+
+			"Argument 3: Characters you know aren't in the word\n"+
+			"Sending a number as an argument sets the size of the word\n", 
 		)
 	}
 
 	if len(os.Args) > 1 {
-		for i, a := range os.Args {
-			switch a {
-			case "-h", "--help":
+		var i int
+		for _, a := range os.Args {
+			wordSize, err := strconv.Atoi(a)
+			switch {
+			case a == "-h" || a == "--help":
 				help()
 				return
+			case err == nil:
+				if len(search) != wordSize {
+					createDict(wordSize)
+					createSearch(wordSize)
+				}
+			default:
+				i++
 			}
-			switch i {
+			switch i-1 {
 			case 1:
 				posIs = strings.TrimSpace(a)
 			case 2:
@@ -300,7 +310,7 @@ func main() {
 				notIn = strings.TrimSpace(a)
 			case 4:
 				runSearch(true)
-				fmt.Println("Too many args, using the first 3")
+				fmt.Println("Too many args, attempted to use the first 3")
 				return
 			}
 		}

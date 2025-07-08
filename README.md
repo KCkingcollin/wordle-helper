@@ -6,13 +6,12 @@
 
 In simple cli mode you provide it with anywhere from 1 to 3 arguments when calling the program.
 
-Argument 1: Type phrase, use _ in the place of any unknown characters before the search term  
-Argument 2: In the second argument type any characters you know are in the word, but not the position  
-Use _ to put the characters in the place you know they are not in  
-Argument 3: Type in any characters you know aren't in the word  
-Make sure the characters are all lowercase  
+Argument 1: Known letter locations, use _ in the place of any unknown characters before the search term  
+Argument 2: Characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in  
+Argument 3: Characters you know aren't in the word  
+Sending a number as an argument sets the size of the word  
 
-You can get that same syntax by using `--help` or `-h` in the first argument.
+You can get the argument syntax by using `--help` or `-h` in the first argument.
 
 #### example usage:
 
@@ -39,10 +38,6 @@ I realize this mode will be largely unused, however I plan to use a similar inte
 ## Sorting
 
 In both modes the output is sorted based on the popularity of the word, this makes picking the right word a lot easier.
-
-## Word size
-
-At the moment it only supports a 5 letter word dictionary, however the repo I'm using to build the dictionary has plenty of words in it, so I may add the ability to rebuild the local dictionary with different word sizes, but I did not build this app with dynamic word sizes in mind, so this might be one of the last features I add.
 
 ## Building
 
