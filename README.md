@@ -40,6 +40,10 @@ I realize this mode will be largely unused, however I plan to use a similar inte
 
 In both modes the output is sorted based on the popularity of the word, this makes picking the right word a lot easier.
 
+## Word size
+
+At the moment it only supports a 5 letter word dictionary, however the repo I'm using to build the dictionary has plenty of words in it, so I may add the ability to rebuild the local dictionary with different word sizes, but I did not build this app with dynamic word sizes in mind, so this might be one of the last features I add.
+
 ## Building
 
 Go is extremely easy to use, all you have to do is insure go is installed (and git if you clone the repo), then simply run `go build wordle-helper.go` inside the downloaded repo.  
