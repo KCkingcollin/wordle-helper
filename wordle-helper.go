@@ -279,8 +279,8 @@ func main() {
 
 	help := func() {
 		fmt.Print(
-			"Argument 1: Known character locations, use _ in the place of any unknown characters before the search term\n"+
-			"Argument 2: Characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in\n"+
+			"Argument 1: Known character locations, use _ in the place of any unknown characters before the last known character\n"+
+			"Argument 2: Characters known to be in the word, but not the position, use _ in the place of possible positions\n"+
 			"Argument 3: Characters you know aren't in the word\n"+
 			"Sending a number as an argument sets the size of the word, otherwise it will default to 5\n", 
 		)
@@ -346,10 +346,10 @@ func main() {
 	mainTextBuf = make([][]rune, screenSizeY)
 	ev = screen.PollEvent()
 	for {
-		drawText("Type known character locations, use _ or a space in the place of any unknown characters before the search term\n")
+		drawText("Type known character locations, use _ in the place of any unknown characters before the last known character\n")
 		drawText(" > ")
 		input()
-		drawText("Type characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in\n")
+		drawText("Type characters known to be in the word, but not the position, use _ in the place of possible positions\n")
 		drawText(" > ")
 		input()
 		drawText("Type characters you know aren't in the word\n")
