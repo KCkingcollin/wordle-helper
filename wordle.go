@@ -289,7 +289,7 @@ func main() {
 		fmt.Print(
 			"Argument 1: Type phrase, use _ in the place of any unknown characters before the search term\n"+
 			"Argument 2: In the second argument type any characters you know are in the word, but not the position\n"+
-			"			 Use _ to put the characters in the place you know they are not in\n"+
+			"            Use _ to put the characters in the place you know they are not in\n"+
 			"Argument 3: Type in any characters you know aren't in the word\n"+
 			"Make sure the characters are all lowercase\n", 
 		)
