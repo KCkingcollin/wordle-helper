@@ -24,7 +24,6 @@ type word struct{
 var (
 	screen 				tcell.Screen
 	defaultStyle 		= tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorWhite)
-	logMessages 		[]string
 	posIs, isIn, notIn 	string
 	search 				[5][26]map[uint16]uint8
 	dict 				[]word
@@ -138,17 +137,7 @@ func containsAll(s, requiredBytes []byte) bool {
 }
 
 func runSearch(notInRaw ...bool) {
-		// fmt.Print("Type phrase, use _ in the place of any unknown characters before the search term\nMake sure the characters are all lowercase\n")
-		// inputBuf := bufio.NewReader(os.Stdin)
-		// fmt.Print("is in pos > ")
-		// posIs, _ = inputBuf.ReadString('\n')
 		if len(posIs) <= 0 {posIs+="_"}
-		// fmt.Print("is in word > ")
-		// isIn, _ = inputBuf.ReadString('\n')
-		// isIn = strings.TrimSpace(isIn)
-		// fmt.Print("not in word > ")
-		// notIn, _ = inputBuf.ReadString('\n')
-		// notIn = strings.TrimSpace(notIn)
 		size := len(posIs)
 		list := make([]map[uint16]uint8, size)
 		for i, r := range []rune(posIs) {
