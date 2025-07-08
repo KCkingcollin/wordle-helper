@@ -29,10 +29,11 @@ var (
 	search 				[][26]map[uint16]uint8
 	dict 				[]word
 	mainTextBuf 		[][]rune
+	ev 					tcell.Event
 )
 
 func input() {
-	ev := screen.PollEvent()
+	ev = screen.PollEvent()
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
 		switch ev.Key() {
@@ -278,7 +279,7 @@ func main() {
 
 	help := func() {
 		fmt.Print(
-			"Argument 1: Known letter locations, use _ in the place of any unknown characters before the search term\n"+
+			"Argument 1: Known character locations, use _ in the place of any unknown characters before the search term\n"+
 			"Argument 2: Characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in\n"+
 			"Argument 3: Characters you know aren't in the word\n"+
 			"Sending a number as an argument sets the size of the word, otherwise it will default to 5\n", 
@@ -343,13 +344,16 @@ func main() {
 
 	_, screenSizeY := screen.Size()
 	mainTextBuf = make([][]rune, screenSizeY)
+	ev = screen.PollEvent()
 	for {
-		drawText("Type phrase, use _ in the place of any unknown characters before the search term\nMake sure the characters are all lowercase\n")
-		drawText("is in pos > ")
+		drawText("Type known character locations, use _ or a space in the place of any unknown characters before the search term\n")
+		drawText(" > ")
 		input()
-		drawText("is in word > ")
+		drawText("Type characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in\n")
+		drawText(" > ")
 		input()
-		drawText("not in word > ")
+		drawText("Type characters you know aren't in the word\n")
+		drawText(" > ")
 		input()
 		runSearch()
 	}

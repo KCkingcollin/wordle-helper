@@ -6,7 +6,7 @@
 
 In simple cli mode you provide it with anywhere from 1 to 3 arguments when calling the program.
 
-Argument 1: Known letter locations, use _ in the place of any unknown characters before the search term  
+Argument 1: Known character locations, use _ in the place of any unknown characters before the search term  
 Argument 2: Characters known to be in the word, but not the position, use _ to put them in the place that know they aren't in  
 Argument 3: Characters you know aren't in the word  
 Sending a number as an argument sets the size of the word, otherwise it will default to 5  
