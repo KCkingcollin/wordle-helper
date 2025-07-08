@@ -138,27 +138,27 @@ func containsAll(s, requiredBytes []byte) bool {
 
 func runSearch(notInRaw ...bool) {
 		if len(posIs) <= 0 {posIs+="_"}
+		if len(posIs) > len(search) {posIs = posIs[:len(search)]}
 		size := len(posIs)
 		list := make([]map[uint16]uint8, size)
+		add2List := func(i int, j uint16) {
+			ok := true
+			if i > 0 {_, ok = list[i-1][j]}
+			if ok && containsAll(dict[int(j)].W[:5], []byte(isIn)) && !containsAny(dict[int(j)].W[:5], []byte(notIn)) {
+				list[i][j]++
+			}
+		}
 		for i, r := range []rune(posIs) {
 			list[i] = make(map[uint16]uint8)
 			if int(r) <= 123 && int(r) >= 97 {
-				for j, _ := range search[i][int(r-97)] {
-					ok := true
-					if i > 0 {_, ok = list[i-1][j]}
-					if ok && containsAll(dict[int(j)].W[:5], []byte(isIn)) && !containsAny(dict[int(j)].W[:5], []byte(notIn)) {
-						list[i][j]++
-					}
+				for j := range search[i][int(r-97)] {
+					add2List(i, j)
 				}
 			} else {
 				for k := range 26 {
 					if !containsAny([]byte{byte(k+97)}, []byte(notIn)) {
-						for j, _ := range search[i][k] {
-							ok := true
-							if i > 0 {_, ok = list[i-1][j]}
-							if ok && containsAll(dict[int(j)].W[:5], []byte(isIn)) && !containsAny(dict[int(j)].W[:5], []byte(notIn)) {
-								list[i][j]++
-							}
+						for j := range search[i][k] {
+							add2List(i, j)
 						}
 					}
 				}
@@ -166,7 +166,7 @@ func runSearch(notInRaw ...bool) {
 		}
 		output := make([]word, len(list[len(list)-1]))
 		var i int
-		for s, _ := range list[len(list)-1] {
+		for s := range list[len(list)-1] {
 			output[i] = dict[s]
 			i++
 		}
