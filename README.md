@@ -12,7 +12,7 @@ Use _ to put the characters in the place you know they are not in
 Argument 3: Type in any characters you know aren't in the word  
 Make sure the characters are all lowercase  
 
-You can get that same syntax by just typing --help or -h in the first argument.
+You can get that same syntax by using `--help` or `-h` in the first argument.
 
 #### example usage:
 
@@ -39,4 +39,16 @@ I realize this mode will be largely unused, however I plan to use a similar inte
 ## Sorting
 
 In both modes the output is sorted based on the popularity of the word, this makes picking the right word a lot easier.
+
+## Building
+
+Go is extremely easy to use, all you have to do is insure go is installed (and git if you clone the repo), then simply run `go build wordle-helper.go` inside the downloaded repo.  
+Here's how you'd do it in linux as an example (It should also work in windows the same way, but keep in mind I did not make this with windows in mind):  
+```
+git clone https://github.com/KCkingcollin/wordle-helper
+cd wordle-helper
+go build wordle-helper.go
+```
+
+Once I finish up the raw cli mode I'll most likely create a release with a linux binary, and a windows exe if it doesn't give me any trouble.
 
