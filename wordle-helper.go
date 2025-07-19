@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/gob"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -199,6 +199,88 @@ func runSearch(notInRaw ...bool) {
 	}
 }
 
+func saveSearch(fileName string, search [][alphaSize]map[uint16]struct{}) {
+	bufSizeGeuss := len(search[0][0])*alphaSize*len(search)*2+1
+	buf := make([]byte, 0, bufSizeGeuss)
+	buf = append(buf, byte(len(search)))
+	for _, mapSlice := range search {
+		for _, m := range mapSlice {
+			for key := range m {
+				buf = binary.BigEndian.AppendUint16(buf, key)
+			}
+			buf = append(buf, byte('A'))
+		}
+		buf = append(buf, byte('B'))
+	}
+	file, err := os.Create(fileName)
+	defer file.Close()
+	isError(err)
+	io.Copy(file, bytes.NewReader(buf))
+}
+
+func loadSearch(fileName string) [][alphaSize]map[uint16]struct{} {
+	file, err := os.Open(fileName)
+	defer file.Close()
+	isError(err)
+	reader := bufio.NewReader(file)
+	wordSize, _ := reader.ReadByte()
+	search := make([][alphaSize]map[uint16]struct{}, wordSize)
+	key := make([]byte, 2)
+	for i := range wordSize {
+		buf, err := reader.ReadBytes('B')
+		if err != nil {break}
+		buf = buf[:len(buf)-1]
+		reader2 := bufio.NewReader(bytes.NewBuffer(buf))
+		for j := range alphaSize {
+			buf2, err := reader2.ReadBytes('A')
+			if err != nil {break}
+			buf2 = buf2[:len(buf2)-1]
+			reader3 := bufio.NewReader(bytes.NewBuffer(buf2))
+			for {
+				_, err := reader3.Read(key)
+				if err != nil {break}
+				search[i][j] = make(map[uint16]struct{})
+				search[i][j][binary.BigEndian.Uint16(key)] = setEmpty
+			}
+		}
+	}
+	return search
+}
+
+func saveDict(fileName string, dict []word) {
+	buf := make([]byte, 0, len(dict)*4)
+	for _, elm := range dict {
+		buf = append(buf, byte(len(elm.W)))
+		buf = append(buf, []byte(elm.W)...)
+		buf = binary.BigEndian.AppendUint16(buf, elm.Rank)
+	}
+	file, err := os.Create(fileName)
+	defer file.Close()
+	isError(err)
+	io.Copy(file, bytes.NewReader(buf))
+}
+
+func loadDict(fileName string) []word {
+	dict := make([]word, 0, 15000)
+	file, err := os.Open(fileName)
+	defer file.Close()
+	isError(err)
+	buf := bufio.NewReader(file)
+	rank := make([]byte, 2)
+	for i := 0; true; i++ {
+		var elm word
+		wordSize, err := buf.ReadByte()
+		if err != nil {break}
+		w := make([]byte, wordSize)
+		buf.Read(w)
+		elm.W = string(w)
+		buf.Read(rank)
+		elm.Rank = binary.BigEndian.Uint16(rank)
+		dict = append(dict, elm)
+	}
+	return dict
+}
+
 func createDict() []word {
 	var dict []word
 	resp, err := http.Get("https://raw.githubusercontent.com/dwyl/english-words/refs/heads/master/words_alpha.txt")
@@ -241,26 +323,25 @@ func createDict() []word {
 		}
 		dict = append(dict, word)
 	}
-	file, err := os.Create("dict.gob")
-	defer file.Close()
-	isError(err)
-	encoder := gob.NewEncoder(file)
-	encoder.Encode(dict)
+	saveDict("dict.bin", dict)
 	return dict
 }
 
-func createWordDict(wordSize int, dict []word) {
+func createWordDict(wordSize int) {
+	var dict []word
+	_, err := os.Stat("dict.bin")
+	if errors.Is(err, os.ErrNotExist) {
+		dict = createDict()
+	} else {
+		dict = loadDict("dict.bin")
+	}
 	wordDict = make([]word, 0)
 	for _, word := range dict {
 		if len(word.W) == wordSize {
 			wordDict = append(wordDict, word)
 		}
 	}
-	file, err := os.Create("word-dict.gob")
-	defer file.Close()
-	isError(err)
-	encoder := gob.NewEncoder(file)
-	encoder.Encode(wordDict)
+	saveDict("word-dict.bin", wordDict)
 }
 
 func createSearch(wordSize int) {
@@ -275,43 +356,25 @@ func createSearch(wordSize int) {
 			}
 		}
 	}
-	file, err := os.Create("search-map.gob")
-	defer file.Close()
-	isError(err)
-	encoder := gob.NewEncoder(file)
-	encoder.Encode(searchMap)
+	saveSearch("search-map.bin", searchMap)
 }
 
 func main() {
-	var dict []word
-	file, err := os.Open("dict.gob")
-	defer file.Close()
+	start := time.Now()
+	_, err := os.Stat("word-dict.bin")
 	if errors.Is(err, os.ErrNotExist) {
-		dict = createDict()
+		createWordDict(defWsize)
 	} else {
-		decode := gob.NewDecoder(file)
-		err := decode.Decode(&dict)
-		isError(err)
+		wordDict = loadDict("word-dict.bin")
 	}
 
-	file, err = os.Open("word-dict.gob")
-	defer file.Close()
-	if errors.Is(err, os.ErrNotExist) {
-		createWordDict(defWsize, dict)
-	} else {
-		decode := gob.NewDecoder(file)
-		err := decode.Decode(&wordDict)
-		isError(err)
-	}
-
-	file, err = os.Open("search-map.gob")
+	_, err = os.Stat("search-map.bin")
 	if errors.Is(err, os.ErrNotExist) {
 		createSearch(defWsize)
 	} else {
-		decode := gob.NewDecoder(file)
-		err := decode.Decode(&searchMap)
-		isError(err)
+		loadSearch("search-map.bin")
 	}
+	fmt.Println(time.Since(start))
 
 	help := func() {
 		fmt.Print(
@@ -335,7 +398,7 @@ func main() {
 			case err == nil:
 				wordSize = size
 				if len(searchMap) != wordSize {
-					createWordDict(wordSize, dict)
+					createWordDict(wordSize)
 					createSearch(wordSize)
 				}
 			default:
@@ -359,7 +422,7 @@ func main() {
 			}
 		}
 		if len(searchMap) != defWsize && wordSize == 0 {
-			createWordDict(defWsize, dict)
+			createWordDict(defWsize)
 			createSearch(defWsize)
 		}
 		runSearch(true)
