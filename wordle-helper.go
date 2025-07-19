@@ -181,8 +181,8 @@ func runSearch(notInRaw ...bool) {
 	}
 	output := make([]word, len(list[len(list)-1]))
 	var i int
-	for s := range list[len(list)-1] {
-		output[i] = wordDict[s]
+	for key := range list[len(list)-1] {
+		output[i] = wordDict[key]
 		i++
 	}
 	sort.Slice(output, func(i, j int) bool {
@@ -208,9 +208,9 @@ func saveSearch(fileName string, search [][alphaSize]map[uint16]struct{}) {
 			for key := range m {
 				buf = binary.BigEndian.AppendUint16(buf, key)
 			}
-			buf = append(buf, byte('A'))
+			buf = append(buf, []byte("Char")...)
 		}
-		buf = append(buf, byte('B'))
+		buf = append(buf, []byte("Posi")...)
 	}
 	file, err := os.Create(fileName)
 	defer file.Close()
@@ -219,27 +219,23 @@ func saveSearch(fileName string, search [][alphaSize]map[uint16]struct{}) {
 }
 
 func loadSearch(fileName string) [][alphaSize]map[uint16]struct{} {
+	var buf []byte
 	file, err := os.Open(fileName)
 	defer file.Close()
 	isError(err)
-	reader := bufio.NewReader(file)
-	wordSize, _ := reader.ReadByte()
+	buf, _ = io.ReadAll(file)
+	wordSize := int(buf[0])
+	bufStr := strings.Split(string(buf[1:]), "Posi")
 	search := make([][alphaSize]map[uint16]struct{}, wordSize)
 	key := make([]byte, 2)
-	for i := range wordSize {
-		buf, err := reader.ReadBytes('B')
-		if err != nil {break}
-		buf = buf[:len(buf)-1]
-		reader2 := bufio.NewReader(bytes.NewBuffer(buf))
-		for j := range alphaSize {
-			buf2, err := reader2.ReadBytes('A')
-			if err != nil {break}
-			buf2 = buf2[:len(buf2)-1]
-			reader3 := bufio.NewReader(bytes.NewBuffer(buf2))
+	for i, str := range bufStr[:len(bufStr)-1] {
+		bufStr2 := strings.Split(str, "Char")
+		for j, str2 := range bufStr2[:len(bufStr2)-1] {
+			reader := bufio.NewReader(bytes.NewBuffer([]byte(str2)))
+			search[i][j] = make(map[uint16]struct{})
 			for {
-				_, err := reader3.Read(key)
+				_, err := reader.Read(key)
 				if err != nil {break}
-				search[i][j] = make(map[uint16]struct{})
 				search[i][j][binary.BigEndian.Uint16(key)] = setEmpty
 			}
 		}
@@ -371,7 +367,7 @@ func main() {
 	if errors.Is(err, os.ErrNotExist) {
 		createSearch(defWsize)
 	} else {
-		loadSearch("search-map.bin")
+		searchMap = loadSearch("search-map.bin")
 	}
 
 	help := func() {
