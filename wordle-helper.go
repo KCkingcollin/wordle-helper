@@ -360,7 +360,6 @@ func createSearch(wordSize int) {
 }
 
 func main() {
-	start := time.Now()
 	_, err := os.Stat("word-dict.bin")
 	if errors.Is(err, os.ErrNotExist) {
 		createWordDict(defWsize)
@@ -374,7 +373,6 @@ func main() {
 	} else {
 		loadSearch("search-map.bin")
 	}
-	fmt.Println(time.Since(start))
 
 	help := func() {
 		fmt.Print(
