@@ -13,9 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/gdamore/tcell/v2"
 )
 
 const (
@@ -35,11 +32,7 @@ var (
 	searchMap 				[][alphaSize]map[uint16]struct{}
 	wordDict 				[]word
 	setEmpty 				= struct{}{}
-	screen 					tcell.Screen
-	defaultStyle 			= tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorWhite)
 	posIs, isIn, notIn 		string
-	mainTextBuf 			[][]rune
-	ev 						tcell.Event
 )
 
 type word struct {
@@ -51,62 +44,6 @@ func isError(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-// wip and not ready for use
-func input() {
-	ev = screen.PollEvent()
-	switch ev := ev.(type) {
-	case *tcell.EventKey:
-		switch ev.Key() {
-		case tcell.KeyCtrlC:
-			drawText("\nCtrl+C pressed. Exiting.\n")
-			time.Sleep(time.Millisecond*500)
-			screen.Fini()
-			os.Exit(0)
-		case tcell.KeyBackspace:
-			drawText(string(rune(0x08)))
-			input()
-		case tcell.KeyEnter:
-			drawText("\n")
-			return
-		case tcell.KeyRune:
-			drawText(string(ev.Rune()))
-			input()
-		}
-	case *tcell.EventResize:
-		_, screenSizeY := screen.Size()
-		mainTextBuf = make([][]rune, screenSizeY)
-		screen.Sync()
-	}
-}
-
-// wip and not ready for use
-func drawText(text string) {
-	sizeX, sizeY := screen.Size()
-	for _, r := range text {
-		switch r {
-		case '\n':
-			slice := make([]rune, sizeX-len(mainTextBuf[sizeY-1]))
-			mainTextBuf[sizeY-1] = append(mainTextBuf[sizeY-1], slice...)
-			slice = make([]rune, 0)
-			mainTextBuf = mainTextBuf[1:]
-			mainTextBuf = append(mainTextBuf, slice)
-			for x := range sizeX {
-				screen.SetContent(x, sizeY-1, ' ', nil, defaultStyle)
-			}
-		case 0x08:
-			mainTextBuf = mainTextBuf[:1]
-		default:
-			mainTextBuf[sizeY-1] = append(mainTextBuf[sizeY-1], r)
-		}
-	}
-	for y := range mainTextBuf {
-		for x, r := range mainTextBuf[y] {
-			screen.SetContent(x, y, r, nil, defaultStyle)
-		}
-	}
-	screen.Show()
 }
 
 func containsAny(s, targetString string) bool {
@@ -150,7 +87,7 @@ func containsAll(s, requiredRunes string) bool {
 	return true
 }
 
-func runSearch(notInRaw ...bool) {
+func runSearch() {
 	if len(posIs) <= 0 {posIs+="_"}
 	size := len(searchMap)
 	if len(posIs) > size {posIs = posIs[:size]}
@@ -192,11 +129,7 @@ func runSearch(notInRaw ...bool) {
 	for _, r := range output {
 		textBuf += string(r.W[:size])+"\n"
 	}
-	if len(notInRaw) > 0 && notInRaw[0] {
-		fmt.Print(textBuf)
-	} else {
-		drawText(textBuf)
-	}
+	fmt.Print(textBuf)
 }
 
 func saveSearch(fileName string, search [][alphaSize]map[uint16]struct{}) {
@@ -419,39 +352,7 @@ func main() {
 			createWordDict(defWsize)
 			createSearch(defWsize)
 		}
-		runSearch(true)
-		return
-	}
-
-	screen, err = tcell.NewScreen()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create screen: %v\n", err)
-		return
-	}
-
-	if err = screen.Init(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to initialize screen: %v\n", err)
-		return
-	}
-	defer screen.Fini()
-
-	screen.SetStyle(defaultStyle)
-	screen.Clear()
-
-	_, screenSizeY := screen.Size()
-	mainTextBuf = make([][]rune, screenSizeY)
-	ev = screen.PollEvent()
-	for {
-		drawText("Type known character locations, use _ in the place of any unknown characters\n")
-		drawText("_ is only required in the positions before the known characters\n")
-		drawText(" > ")
-		input()
-		drawText("Type characters known to be in the word, use _ in the place of possible positions\n")
-		drawText(" > ")
-		input()
-		drawText("Type characters you know aren't in the word\n")
-		drawText(" > ")
-		input()
 		runSearch()
+		return
 	}
 }
